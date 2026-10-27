@@ -10,6 +10,7 @@
   "description": "",
   "main": "node prg5.js",
   "scripts": {
+    "start": "node pr12.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,3 +18,4 @@
   "license": "ISC",
   "type": "commonjs"
 }
+ 
