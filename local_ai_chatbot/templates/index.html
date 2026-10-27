@@ -1,0 +1,495 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat</title>
+
+<style>
+:root {
+    --accent: #6258e8;
+    --accent-dark: #5146d8;
+    --text: #24243a;
+    --muted: #77778b;
+    --surface: #ffffff;
+    --soft: #f0efff;
+    --border: #e9e8f2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f6f6fb;
+    color: var(--text);
+}
+
+.app {
+    height: 100dvh;
+    max-width: 1200px;
+    margin: auto;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px clamp(16px, 5vw, 70px);
+    scroll-behavior: smooth;
+}
+
+.welcome {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 30px 10px;
+}
+
+.welcome h1 {
+    margin: 0 0 12px;
+    font-size: clamp(27px, 4vw, 38px);
+    font-weight: 650;
+    letter-spacing: -1px;
+}
+
+.welcome p {
+    color: var(--muted);
+    font-size: 16px;
+    margin: 0 0 28px;
+}
+
+.suggestions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 700px;
+}
+
+.suggestion {
+    padding: 12px 16px;
+    background: white;
+    color: #46445e;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .2s, border-color .2s;
+}
+
+.suggestion:hover {
+    background: var(--soft);
+    border-color: #c7c2ff;
+}
+
+.row {
+    display: flex;
+    margin: 20px 0;
+}
+
+.row.user { justify-content: flex-end; }
+.row.assistant { justify-content: flex-start; }
+
+.bubble {
+    max-width: min(82%, 760px);
+    padding: 15px 19px;
+    border-radius: 22px;
+    line-height: 1.65;
+    font-size: 16px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.user .bubble {
+    background: var(--accent);
+    color: white;
+    border-bottom-right-radius: 7px;
+}
+
+.assistant .bubble {
+    background: #f3f2ff;
+    color: var(--text);
+    border-bottom-left-radius: 7px;
+}
+
+.assistant .bubble:empty::after {
+    content: " ";
+}
+
+.error .bubble {
+    background: #fff0f0;
+    color: #b42318;
+}
+
+.composer {
+    flex-shrink: 0;
+    padding: 14px clamp(12px, 3vw, 28px) 12px;
+    background: white;
+    border-top: 1px solid var(--border);
+}
+
+.input-wrap {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+textarea {
+    flex: 1;
+    min-width: 0;
+    min-height: 58px;
+    max-height: 180px;
+    resize: none;
+    border: 1.5px solid #d9d7ed;
+    border-radius: 19px;
+    padding: 17px 18px;
+    outline: none;
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.45;
+    background: #fff;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px #6258e817;
+}
+
+button {
+    flex-shrink: 0;
+    height: 58px;
+    width: 56px;
+    border: none;
+    border-radius: 17px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 23px;
+    transition: background .2s, transform .15s;
+}
+
+button:active { transform: scale(.96); }
+
+button:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+#mic {
+    background: #f0eff9;
+    color: #55516e;
+}
+
+#mic:hover { background: #e7e5fa; }
+
+#send {
+    background: var(--accent);
+    color: white;
+    font-size: 32px;
+}
+
+#send:hover { background: var(--accent-dark); }
+
+#send:disabled { background: #a6a1e9; }
+
+#status {
+    min-height: 18px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin: 9px 0 0;
+}
+
+@media (max-width: 600px) {
+    #chat { padding: 15px; }
+    .welcome h1 { font-size: 27px; }
+    .bubble { max-width: 92%; font-size: 15px; }
+    .controls { gap: 7px; }
+    button { width: 46px; height: 54px; }
+    textarea { min-height: 54px; padding: 14px; }
+    .composer { padding: 10px; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+    <main id="chat">
+        <section class="welcome" id="welcome">
+            <h1>What can I help you with?</h1>
+            <p>Ask a question, learn something new, or explore an idea.</p>
+
+            <div class="suggestions">
+                <button class="suggestion"
+                    data-prompt="Explain Python in simple words.">
+                    Learn Python
+                </button>
+                <button class="suggestion"
+                    data-prompt="Give me five useful study tips.">
+                    Study tips
+                </button>
+                <button class="suggestion"
+                    data-prompt="Write a simple Python program to add two numbers.">
+                    Write code
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="composer">
+        <div class="input-wrap">
+            <div class="controls">
+                <textarea id="question"
+                    rows="1"
+                    placeholder="Ask anything..."
+                    aria-label="Your message"></textarea>
+
+                <button id="mic" type="button"
+                    title="Use microphone" aria-label="Use microphone">🎙</button>
+
+                <button id="send" type="button"
+                    title="Send message" aria-label="Send message">↑</button>
+            </div>
+            <p id="status">Enter to send · Shift + Enter for a new line</p>
+        </div>
+    </footer>
+</div>
+
+<script>
+const chat = document.getElementById("chat");
+const welcome = document.getElementById("welcome");
+const input = document.getElementById("question");
+const sendButton = document.getElementById("send");
+const micButton = document.getElementById("mic");
+const statusText = document.getElementById("status");
+
+const history = [];
+let busy = false;
+let activeController = null;
+
+function scrollToBottom() {
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function addBubble(text, role) {
+    const row = document.createElement("div");
+    row.className = "row " + role;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
+
+    row.appendChild(bubble);
+    chat.appendChild(row);
+    scrollToBottom();
+
+    return bubble;
+}
+
+function setBusy(value) {
+    busy = value;
+    sendButton.disabled = value;
+    input.disabled = value;
+    micButton.disabled = value;
+    sendButton.textContent = value ? "…" : "↑";
+}
+
+async function sendMessage(text = input.value) {
+    text = text.trim();
+
+    if (!text || busy) return;
+
+    if (welcome) {
+        welcome.remove();
+    }
+
+    addBubble(text, "user");
+    history.push({ role: "user", content: text });
+
+    input.value = "";
+    input.style.height = "58px";
+    setBusy(true);
+    statusText.textContent = "Thinking…";
+
+    const answerBubble = addBubble("", "assistant");
+    let answer = "";
+    let streamFinished = false;
+    activeController = new AbortController();
+
+    try {
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: history }),
+            signal: activeController.signal
+        });
+
+        if (!response.ok) {
+            let errorMessage = "Request failed (" + response.status + ").";
+
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (_) {}
+
+            throw new Error(errorMessage);
+        }
+
+        if (!response.body) {
+            throw new Error("Streaming is not supported by this browser.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let pending = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) break;
+
+            pending += decoder.decode(value, { stream: true });
+
+            const lines = pending.split("\n");
+            pending = lines.pop() || "";
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+
+                const item = JSON.parse(line);
+
+                if (item.error) {
+                    throw new Error(item.error);
+                }
+
+                if (item.message && item.message.content) {
+                    answer += item.message.content;
+                    answerBubble.textContent = answer;
+                    scrollToBottom();
+                }
+
+                if (item.done) {
+                    streamFinished = true;
+                }
+            }
+        }
+
+        pending += decoder.decode();
+
+        if (pending.trim()) {
+            const item = JSON.parse(pending);
+
+            if (item.error) throw new Error(item.error);
+
+            if (item.message && item.message.content) {
+                answer += item.message.content;
+                answerBubble.textContent = answer;
+            }
+
+            if (item.done) streamFinished = true;
+        }
+
+        if (!answer.trim()) {
+            throw new Error("The model returned an empty answer. Please try again.");
+        }
+
+        history.push({ role: "assistant", content: answer });
+        statusText.textContent = "Ready";
+
+    } catch (error) {
+        if (error.name === "AbortError") {
+            statusText.textContent = "Request cancelled.";
+        } else {
+            answerBubble.textContent = "Sorry, " + error.message;
+            answerBubble.parentElement.classList.add("error");
+            statusText.textContent = "Please check that Ollama is running.";
+            console.error("Chat error:", error);
+        }
+    } finally {
+        activeController = null;
+        setBusy(false);
+        input.focus();
+        scrollToBottom();
+    }
+}
+
+sendButton.addEventListener("click", () => sendMessage());
+
+input.addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+});
+
+input.addEventListener("input", () => {
+    input.style.height = "58px";
+    input.style.height = Math.min(input.scrollHeight, 180) + "px";
+});
+
+document.querySelectorAll(".suggestion").forEach(button => {
+    button.addEventListener("click", () => {
+        sendMessage(button.dataset.prompt);
+    });
+});
+
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    micButton.addEventListener("click", () => {
+        try {
+            recognition.start();
+            statusText.textContent = "Listening…";
+        } catch (_) {
+            statusText.textContent = "Microphone is already active.";
+        }
+    });
+
+    recognition.onresult = event => {
+        input.value = event.results[0][0].transcript;
+        input.dispatchEvent(new Event("input"));
+        input.focus();
+        statusText.textContent = "Speech captured. Press the arrow to send.";
+    };
+
+    recognition.onerror = () => {
+        statusText.textContent =
+            "Microphone unavailable. Check your browser permission.";
+    };
+
+    recognition.onend = () => {
+        if (!busy && statusText.textContent === "Listening…") {
+            statusText.textContent = "Enter to send · Shift + Enter for a new line";
+        }
+    };
+} else {
+    micButton.addEventListener("click", () => {
+        statusText.textContent =
+            "Speech recognition is not supported in this browser.";
+    });
+}
+</script>
+</body>
+</html>
